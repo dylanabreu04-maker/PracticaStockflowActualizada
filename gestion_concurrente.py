@@ -1,4 +1,4 @@
-from datos import STOCK_INICIAL, NUM_CAJAS, PEDIDOS, NUM_TERMINALES
+from datos import STOCK_INICIAL, NUM_CAJAS, PEDIDOS, NUM_TERMINALES, REPOSICIONES
 
 import threading
 import time
@@ -12,10 +12,13 @@ pedidos_cajas = PEDIDOS
 
 lock = threading.Lock()
 
-
 # semaphore 
 
 semaforo = threading.Semaphore(NUM_TERMINALES)
+
+# condicion para las reposiciones 
+
+condicion = threading.Condition(lock)
 
 
 def inventario_cajas(pedidos_cajas, num_caja):
@@ -32,18 +35,36 @@ def inventario_cajas(pedidos_cajas, num_caja):
             time.sleep(1)
 
         # seccion crítica explicar en el readme
-            with lock:
+
+            with condicion:
                 stock = inventario[nombre_producto]
                 print("stock:", stock)
-                if stock >= cantidad_producto:
-                    inventario[nombre_producto] -= cantidad_producto
-                    print("\nUnidades descontadas correctamente")
-                else:
-                    print("\nNo hay suficientes unidades")
 
+                while inventario[nombre_producto] < cantidad_producto:
+                    condicion.wait()
+
+                inventario[nombre_producto] -= cantidad_producto
+                print("\nUnidades descontadas correctamente")
+
+                    
             print(f"\nCaja {num_caja} liberada")
 
 
+def reposicion():
+    for reponer in REPOSICIONES:
+        time.sleep(2)
+
+
+        nombre_producto = reponer[1]
+        cantidad_reponer = reponer[2]
+
+        with condicion:
+            inventario[nombre_producto] += cantidad_reponer
+
+            print(f"\nReposicion de {nombre_producto}")
+            print(f"Se añadieron -> {cantidad_reponer}")
+
+            condicion.notify_all()
 
 if __name__ == "__main__":
     for i in range(NUM_CAJAS):
@@ -57,7 +78,16 @@ if __name__ == "__main__":
         hilos.append(hilo)
         hilo.start()
 
+    hilo_reposicion = threading.Thread(
+        target=reposicion
+    )
+
+    hilo_reposicion.start()
+
+    
     for i in hilos:
         i.join()
+
+    hilo_reposicion.join()
 
     print("\nInventario final -> ", inventario)
