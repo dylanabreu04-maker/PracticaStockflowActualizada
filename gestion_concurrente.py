@@ -1,4 +1,4 @@
-from datos import STOCK_INICIAL, NUM_CAJAS, PEDIDOS
+from datos import STOCK_INICIAL, NUM_CAJAS, PEDIDOS, NUM_TERMINALES
 
 import threading
 import time
@@ -7,6 +7,12 @@ hilos = []
 
 inventario = STOCK_INICIAL
 pedidos_cajas = PEDIDOS
+
+# lock que evita cambios simultaneos 
+
+lock = threading.Lock()
+
+
 
 
 def inventario_cajas(pedidos_cajas):
@@ -19,14 +25,16 @@ def inventario_cajas(pedidos_cajas):
         print("Cantidad :", cantidad_producto)
 
 
-        # seccion crítica explicar en el readme
-        stock = inventario[nombre_producto]
-        print("stock:", stock)
-        if stock >= cantidad_producto:
-            inventario[nombre_producto] -= cantidad_producto
-            print("\nUnidades descontadas correctamente")
-        else:
-            print("\nNo hay suficientes unidades")
+    # seccion crítica explicar en el readme
+        with lock:
+            stock = inventario[nombre_producto]
+            print("stock:", stock)
+            if stock >= cantidad_producto:
+                inventario[nombre_producto] -= cantidad_producto
+                print("\nUnidades descontadas correctamente")
+            else:
+                print("\nNo hay suficientes unidades")
+
 
 
 
