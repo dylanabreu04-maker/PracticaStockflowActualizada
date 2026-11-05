@@ -30,7 +30,6 @@ gestor = GestorInventario()
     
 hilos = []
 
-
 pedidos_cajas = PEDIDOS
 
 # semaphore 
@@ -90,6 +89,7 @@ def revisar_inventario(productos, num_revisor):
     for producto in productos:
         stock = gestor.consultar_stock(producto)
         print(f"Revisor {num_revisor} -> {producto}: {stock} unidades")
+    barrera.wait()
 
     print(f"Revisor {num_revisor} ha finalizado")
     
