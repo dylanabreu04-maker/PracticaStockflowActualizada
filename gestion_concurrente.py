@@ -1,4 +1,4 @@
-from datos import STOCK_INICIAL, NUM_CAJAS, PEDIDOS, NUM_TERMINALES, REPOSICIONES
+from datos import STOCK_INICIAL, NUM_CAJAS, PEDIDOS, NUM_TERMINALES, REPOSICIONES, NUM_REVISORES
 
 import threading
 import time
@@ -19,6 +19,10 @@ semaforo = threading.Semaphore(NUM_TERMINALES)
 # condicion para las reposiciones 
 
 condicion = threading.Condition(lock)
+
+# barrera
+
+barrera = threading.Barrier(NUM_REVISORES)
 
 
 def inventario_cajas(pedidos_cajas, num_caja):
@@ -41,7 +45,9 @@ def inventario_cajas(pedidos_cajas, num_caja):
                 print("stock:", stock)
 
                 while inventario[nombre_producto] < cantidad_producto:
+                    print(f"Caja {num_caja} esperando reposición de {nombre_producto}")
                     condicion.wait()
+                print(f"Caja {num_caja} continúa con el pedido de {nombre_producto}")
 
                 inventario[nombre_producto] -= cantidad_producto
                 print("\nUnidades descontadas correctamente")
@@ -66,6 +72,16 @@ def reposicion():
 
             condicion.notify_all()
 
+
+def revisar_inventario(productos, num_revisor):
+    print(f"Revisor {num_revisor} empieza")
+
+    for producto in productos:
+        print(f"Revisor {num_revisor} -> {producto}: {inventario[producto]} unidades")
+
+    print(f"Revisor {num_revisor} ha finalizado")
+    
+
 if __name__ == "__main__":
     for i in range(NUM_CAJAS):
 
@@ -89,5 +105,23 @@ if __name__ == "__main__":
         i.join()
 
     hilo_reposicion.join()
+
+    productos = list(inventario.keys())
+
+    hilos_revisores = []
+
+    for i in range(NUM_REVISORES):
+        productos_revisor = productos[i::NUM_REVISORES]
+
+        hilo = threading.Thread(
+            target=revisar_inventario,
+            args=(productos_revisor, i + 1)
+        )
+
+        hilos_revisores.append(hilo)
+        hilo.start()
+
+    for hilo in hilos_revisores:
+        hilo.join()
 
     print("\nInventario final -> ", inventario)
